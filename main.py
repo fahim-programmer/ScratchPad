@@ -5,6 +5,7 @@ from PySide2.QtCore import *
 from PySide2.QtPrintSupport import *
 import os
 import sys
+from editor import CodeEditor
 
 # Creating main window class
 class MainWindow(QMainWindow):
@@ -12,6 +13,9 @@ class MainWindow(QMainWindow):
 	# constructor
 	def __init__(self, *args, **kwargs):
 		super(MainWindow, self).__init__(*args, **kwargs)
+		# self.setStyleSheet(
+		# 	"""color: #ffffff; background-color: #aaaaaa;"""
+		# )
 		#qicon__ = QIcon(QPixmap(''))
 		self.setWindowIcon(QIcon('note.ico'))
 		# setting window geometry
@@ -19,11 +23,12 @@ class MainWindow(QMainWindow):
 		# creating a layout
 		layout = QVBoxLayout()
 		# creating a QPlainTextEdit object
-		self.editor = QPlainTextEdit();self.setWindowFlag(Qt.WindowStaysOnTopHint)
+		self.editor = CodeEditor();
+		self.setWindowFlag(Qt.WindowStaysOnTopHint)
 		# setting font to the editor
-		fixedfont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
-		fixedfont.setPointSize(12)
-		self.editor.setFont(fixedfont)
+		# fixedfont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+		# fixedfont.setPointSize(10)
+		# self.editor.setFont(fixedfont)
 
 		# self.path holds the path of the currently open file.
 		# If none, we haven't got a file open yet (or creating new).
@@ -172,21 +177,24 @@ class MainWindow(QMainWindow):
 		edit_menu.addAction(select_action)
 
 
-		# wrap action
-		wrap_action = QAction("Wrap text to window", self)
-		wrap_action.setStatusTip("Check to wrap text to window")
+		# theme toggle
+		theme_toggle = QAction("Dark Theme", self)
+		theme_toggle.setStatusTip("Check to change between light / dark mode")
 
 		# making it checkable
-		wrap_action.setCheckable(True)
+		theme_toggle.setCheckable(True)
 
 		# making it checked
-		wrap_action.setChecked(True)
+		theme_toggle.setChecked(True)
 
 		# adding action
-		wrap_action.triggered.connect(self.edit_toggle_wrap)
+		theme_toggle.triggered.connect(self.change_theme)
 
 		# adding it to edit menu not to the tool bar
-		edit_menu.addAction(wrap_action)
+		edit_menu.addAction(theme_toggle)
+
+		self.saveShortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+		self.saveShortcut.activated.connect(self.file_save)
 
 		# calling update title method
 		self.update_title()
@@ -214,8 +222,7 @@ class MainWindow(QMainWindow):
 	def file_open(self):
 
 		# getting path and bool value
-		path, _ = QFileDialog.getOpenFileName(self, "Open file", "",
-							"Text documents (*.txt);All files (*.*)")
+		path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Text Files (*.txt)")
 
 		# if path is true
 		if path:
@@ -257,8 +264,7 @@ class MainWindow(QMainWindow):
 	def file_saveas(self):
 
 		# opening path
-		path, _ = QFileDialog.getSaveFileName(self, "Save file", "",
-							"Text documents (*.txt);All files (*.*)")
+		path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "Text documents (*.txt)")
 
 		# if dialog is cancelled i.e no path is selected
 		if not path:
@@ -273,6 +279,7 @@ class MainWindow(QMainWindow):
 	def _save_to_path(self, path):
 
 		# get the text
+		opened_saved = False
 		text = self.editor.toPlainText()
 
 		# try catch block
@@ -283,6 +290,7 @@ class MainWindow(QMainWindow):
 
 				# write text in the file
 				f.write(text)
+				opened_saved = True
 
 		# if error occurs
 		except Exception as e:
@@ -295,7 +303,11 @@ class MainWindow(QMainWindow):
 			# change path
 			self.path = path
 			# update the title
-			self.update_title()
+			if opened_saved == False:
+				self.update_title()
+			else:
+				from datetime import datetime
+				self.setWindowTitle(f"%s - ScratchPad saved on {datetime.now().strftime('%I:%M:%S %p')}" %(os.path.basename(self.path) if self.path else "Untitled"))
 
 	# action called by print
 	def file_print(self):
@@ -313,14 +325,11 @@ class MainWindow(QMainWindow):
 	def update_title(self):
 
 		# setting window title with prefix as file name
-		# suffix as PyQt5 Notepad
-		self.setWindowTitle("%s - ScratchPad" %(os.path.basename(self.path) if self.path else "Untitled"))
+		self.setWindowTitle(f"%s - ScratchPad" %(os.path.basename(self.path) if self.path else "Untitled"))
 
 	# action called by edit toggle
-	def edit_toggle_wrap(self):
-
-		# chaining line wrap mode
-		self.editor.setLineWrapMode(1 if self.editor.lineWrapMode() == 0 else 0 )
+	def change_theme(self):
+		self.editor.toggleDarkLight()
 
 
 # drivers code
